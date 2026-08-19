@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>中文填字游戏 · 硬核版 · 15×15</title>
+<style>
+  :root{
+    --paper:#131519; --ink:#f0ece3; --line:#4b525d; --block:#090a0c;
+    --accent:#d2913f; --accent-soft:#3d3220; --word:#3a4250; --cur:#6b4f22;
+    --ok:#74c08a; --bad:#e2705f; --muted:#8b9099;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:"Songti SC","STSong","Source Han Serif SC","Noto Serif CJK SC","Noto Serif SC",serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  header{padding:22px 24px 10px;border-bottom:1px solid var(--line)}
+  h1{margin:0;font-size:24px;letter-spacing:.14em}
+  .sub{margin-top:6px;font-size:13px;color:var(--muted);letter-spacing:.05em}
+  .wrap{display:flex;gap:26px;align-items:flex-start;padding:18px 24px 60px;flex-wrap:wrap}
+  .left{flex:0 0 auto;position:sticky;top:12px;align-self:flex-start}
+  .right{flex:1 1 380px;min-width:320px;max-width:640px}
+
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
+  button{
+    font-family:inherit;font-size:13px;padding:7px 13px;border:1px solid var(--line);
+    background:#1c1f25;color:var(--ink);border-radius:3px;cursor:pointer;letter-spacing:.06em;
+  }
+  button:hover{background:var(--accent-soft);border-color:var(--accent)}
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  button.primary:hover{background:#b0762f}
+  .stat{font-size:13px;color:var(--muted);margin-left:auto;letter-spacing:.06em;white-space:nowrap}
+
+  table.grid{border-collapse:collapse;background:#2b313a;box-shadow:0 1px 0 var(--line)}
+  table.grid td{
+    width:42px;height:42px;padding:0;border:1px solid var(--line);position:relative;
+    text-align:center;vertical-align:middle;
+  }
+  table.grid td.block{background:var(--block);border-color:var(--block)}
+  td .num{position:absolute;top:0px;left:2px;font-size:10px;line-height:12px;color:var(--muted);
+          font-family:ui-sans-serif,system-ui,sans-serif;pointer-events:none;z-index:2}
+  td input{
+    width:100%;height:100%;border:0;background:transparent;text-align:center;
+    font-family:inherit;font-size:24px;color:var(--ink);padding:0;outline:none;
+    caret-color:var(--accent);
+  }
+  td.inword{background:var(--word)}
+  td.cur{background:var(--cur)}
+  td.wrong input{color:var(--bad);text-decoration:line-through}
+  td.revealed input{color:var(--accent)}
+  td.done input{color:var(--ok)}
+
+  .clue-head{display:flex;gap:14px;border-bottom:1px solid var(--line);margin-bottom:8px}
+  .tab{padding:6px 2px;font-size:15px;cursor:pointer;color:var(--muted);letter-spacing:.1em;
+       border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--accent);border-color:var(--accent)}
+  .cols{display:flex;gap:22px;flex-wrap:wrap}
+  .col{flex:1 1 280px;min-width:260px}
+  .col h3{font-size:13px;letter-spacing:.2em;color:var(--muted);margin:6px 0 8px;font-weight:normal}
+  ol.clues{list-style:none;margin:0;padding:0}
+  ol.clues li{
+    display:flex;gap:8px;padding:5px 7px;border-radius:3px;cursor:pointer;font-size:13.5px;line-height:1.55;
+  }
+  ol.clues li:hover{background:#1c1f25}
+  ol.clues li.on{background:var(--accent-soft)}
+  ol.clues li.solved .txt{color:var(--muted);text-decoration:line-through}
+  li .n{flex:0 0 26px;text-align:right;color:var(--accent);font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;padding-top:2px}
+  li .txt{flex:1}
+  li .len{color:var(--muted);font-size:11px}
+  .cat{display:inline-block;font-size:10px;color:var(--muted);border:1px solid var(--line);
+       border-radius:2px;padding:0 4px;margin-left:5px;vertical-align:1px;letter-spacing:.08em}
+  .current-clue{
+    background:#1c1f25;border:1px solid var(--line);border-left:3px solid var(--accent);
+    padding:9px 12px;margin-bottom:12px;font-size:14px;line-height:1.6;min-height:22px
+  }
+  .hint{font-size:12px;color:var(--muted);line-height:1.8;margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+  @media(max-width:760px){
+    .left{position:static}
+    table.grid td{width:30px;height:30px}
+    td input{font-size:17px}
+    .wrap{padding:14px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>中文填字游戏 · 硬 核 版 · 15 × 15</h1>
+  <div class="sub">冷门典故 · 古籍名画 · 理论物理 · 哲学流派 —— 共 60 条谜面</div>
+</header>
+
+<div class="wrap">
+  <div class="left">
+    <div class="toolbar">
+      <button id="btnCheck">检查</button>
+      <button id="btnHintCell">提示一字</button>
+      <button id="btnHintWord">揭示本词</button>
+      <button id="btnAll" class="primary">显示全部答案</button>
+      <button id="btnClear">清空</button>
+      <span class="stat" id="stat"></span>
+    </div>
+    <div id="gridbox"></div>
+    <div class="hint">
+      方向键移动 · 空格键切换横／纵 · 退格删除并后退 · Tab 跳到下一个词<br>
+      直接用中文输入法打字即可，选好字后会自动跳到下一格。
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="current-clue" id="curclue">点击格子或右侧谜面开始。</div>
+    <div class="cols">
+      <div class="col">
+        <h3>横 向</h3>
+        <ol class="clues" id="listA"></ol>
+      </div>
+      <div class="col">
+        <h3>纵 向</h3>
+        <ol class="clues" id="listD"></ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DATA = {"n": 15, "grid": [["浓", "", "中", "微", "子", "", "领", "导", "班", "子", "", "国", "", "艺", "术"], ["眉", "", "", "", "弹", "道", "导", "弹", "", "", "齐", "民", "要", "术", ""], ["大", "显", "身", "手", "", "", "人", "", "", "清", "", "收", "", "类", "别"], ["眼", "", "", "工", "作", "人", "员", "", "随", "风", "潜", "入", "夜", "", "见"], ["", "土", "", "艺", "", "民", "", "", "葬", "", "移", "", "莺", "", "怪"], ["土", "特", "产", "品", "", "代", "表", "作", "品", "", "默", "", "", "", ""], ["生", "产", "量", "", "仪", "表", "", "品", "", "氧", "化", "还", "原", "", "目"], ["土", "", "", "兵", "器", "", "阴", "", "", "气", "", "", "原", "", "的"], ["长", "恨", "歌", "", "", "盛", "极", "一", "时", "", "融", "", "本", "体", "论"], ["", "", "唱", "", "地", "", "射", "", "", "机", "会", "成", "本", "", ""], ["", "管", "家", "", "铁", "路", "线", "", "", "", "贯", "", "", "", ""], ["五", "", "", "触", "", "遥", "", "普", "普", "通", "通", "", "", "胡", ""], ["光", "彩", "夺", "目", "", "知", "", "", "鲁", "", "", "", "", "言", "论"], ["十", "", "", "惊", "", "马", "尔", "克", "斯", "", "手", "忙", "脚", "乱", ""], ["色", "", "齐", "心", "协", "力", "", "", "特", "殊", "性", "", "", "语", "文"]], "nums": {"0,0": 1, "0,2": 2, "0,4": 3, "0,6": 4, "0,7": 5, "0,11": 6, "0,13": 7, "1,4": 8, "1,10": 9, "2,0": 10, "2,3": 11, "2,9": 12, "2,13": 13, "2,14": 14, "3,3": 15, "3,5": 16, "3,8": 17, "3,10": 18, "3,12": 19, "4,1": 20, "5,0": 21, "5,2": 22, "5,5": 23, "5,7": 24, "6,0": 25, "6,4": 26, "6,9": 27, "6,12": 28, "6,14": 29, "7,3": 30, "7,6": 31, "8,0": 32, "8,2": 33, "8,5": 34, "8,10": 35, "8,12": 36, "9,4": 37, "9,9": 38, "10,1": 39, "10,4": 40, "10,5": 41, "11,0": 42, "11,3": 43, "11,7": 44, "11,8": 45, "11,13": 46, "12,0": 47, "12,13": 48, "13,5": 49, "13,10": 50, "14,2": 51, "14,8": 52, "14,13": 53}, "entries": [{"num": 2, "dir": "A", "row": 0, "col": 2, "word": "中微子", "clue": "泡利为挽救β衰变能量守恒而假设的幽灵粒子", "cat": "物理"}, {"num": 4, "dir": "A", "row": 0, "col": 6, "word": "领导班子", "clue": "一个单位的核心管理层", "cat": "常识"}, {"num": 7, "dir": "A", "row": 0, "col": 13, "word": "艺术", "clue": "绘画、音乐、戏剧的统称", "cat": "艺术"}, {"num": 8, "dir": "A", "row": 1, "col": 4, "word": "弹道导弹", "clue": "沿抛物线轨迹飞行的那类导弹", "cat": "科学"}, {"num": 9, "dir": "A", "row": 1, "col": 10, "word": "齐民要术", "clue": "贾思勰的农书", "cat": "古籍"}, {"num": 10, "dir": "A", "row": 2, "col": 0, "word": "大显身手", "clue": "形容充分施展本领", "cat": "成语"}, {"num": 13, "dir": "A", "row": 2, "col": 13, "word": "类别", "clue": "分门别类之后得到的那些", "cat": "常识"}, {"num": 15, "dir": "A", "row": 3, "col": 3, "word": "工作人员", "clue": "单位里干活的那些人的统称", "cat": "常识"}, {"num": 17, "dir": "A", "row": 3, "col": 8, "word": "随风潜入夜", "clue": "下句是润物细无声", "cat": "诗句"}, {"num": 21, "dir": "A", "row": 5, "col": 0, "word": "土特产品", "clue": "一个地方的特色物产", "cat": "常识"}, {"num": 23, "dir": "A", "row": 5, "col": 5, "word": "代表作品", "clue": "一个作者最拿得出手的那部", "cat": "文学"}, {"num": 25, "dir": "A", "row": 6, "col": 0, "word": "生产量", "clue": "一段时间里造出多少的那个数", "cat": "经济"}, {"num": 26, "dir": "A", "row": 6, "col": 4, "word": "仪表", "clue": "既指测量装置，也指人的外表", "cat": "常识"}, {"num": 27, "dir": "A", "row": 6, "col": 9, "word": "氧化还原", "clue": "得失电子成对发生的那类反应", "cat": "化学"}, {"num": 30, "dir": "A", "row": 7, "col": 3, "word": "兵器", "clue": "十八般的那些", "cat": "武侠"}, {"num": 32, "dir": "A", "row": 8, "col": 0, "word": "长恨歌", "clue": "白居易写马嵬坡与长生殿", "cat": "古籍"}, {"num": 34, "dir": "A", "row": 8, "col": 5, "word": "盛极一时", "clue": "形容一度极其兴盛", "cat": "成语"}, {"num": 36, "dir": "A", "row": 8, "col": 12, "word": "本体论", "clue": "追问存在者之为存在者的那个部门", "cat": "哲学"}, {"num": 38, "dir": "A", "row": 9, "col": 9, "word": "机会成本", "clue": "为选定这一项而放弃的最好那一项的价值", "cat": "经济"}, {"num": 39, "dir": "A", "row": 10, "col": 1, "word": "管家", "clue": "替主人打理家务的那位", "cat": "常识"}, {"num": 40, "dir": "A", "row": 10, "col": 4, "word": "铁路线", "clue": "地图上那些带小横杠的线", "cat": "地理"}, {"num": 44, "dir": "A", "row": 11, "col": 7, "word": "普普通通", "clue": "形容毫不起眼", "cat": "常识"}, {"num": 47, "dir": "A", "row": 12, "col": 0, "word": "光彩夺目", "clue": "形容耀眼到让人挪不开眼", "cat": "成语"}, {"num": 48, "dir": "A", "row": 12, "col": 13, "word": "言论", "clue": "__自由里的那两个字", "cat": "常识"}, {"num": 49, "dir": "A", "row": 13, "col": 5, "word": "马尔克斯", "clue": "多年以后，奥雷里亚诺上校将会回想起", "cat": "文学"}, {"num": 50, "dir": "A", "row": 13, "col": 10, "word": "手忙脚乱", "clue": "形容慌乱得没有章法", "cat": "成语"}, {"num": 51, "dir": "A", "row": 14, "col": 2, "word": "齐心协力", "clue": "形容大家心往一处使", "cat": "成语"}, {"num": 52, "dir": "A", "row": 14, "col": 8, "word": "特殊性", "clue": "与普遍性相对的那个哲学范畴", "cat": "哲学"}, {"num": 53, "dir": "A", "row": 14, "col": 13, "word": "语文", "clue": "中小学最基础的那门课", "cat": "常识"}, {"num": 1, "dir": "D", "row": 0, "col": 0, "word": "浓眉大眼", "clue": "形容相貌端正、五官分明", "cat": "成语"}, {"num": 3, "dir": "D", "row": 0, "col": 4, "word": "子弹", "clue": "从枪膛里射出的那个", "cat": "常识"}, {"num": 4, "dir": "D", "row": 0, "col": 6, "word": "领导人员", "clue": "担任领导职务的那些人", "cat": "常识"}, {"num": 5, "dir": "D", "row": 0, "col": 7, "word": "导弹", "clue": "带制导系统的那种武器", "cat": "科学"}, {"num": 6, "dir": "D", "row": 0, "col": 11, "word": "国民收入", "clue": "衡量一国经济总量的那个指标", "cat": "经济"}, {"num": 7, "dir": "D", "row": 0, "col": 13, "word": "艺术类", "clue": "高考招生里与文理科并列的那一类", "cat": "常识"}, {"num": 11, "dir": "D", "row": 2, "col": 3, "word": "手工艺品", "clue": "靠手做出来的那些器物", "cat": "艺术"}, {"num": 12, "dir": "D", "row": 2, "col": 9, "word": "清风", "clue": "明月__，形容雅致的夜晚", "cat": "文学"}, {"num": 14, "dir": "D", "row": 2, "col": 14, "word": "别见怪", "clue": "请人原谅时说的那三个字", "cat": "常识"}, {"num": 16, "dir": "D", "row": 3, "col": 5, "word": "人民代表", "clue": "人大开会时坐在会场里的那些人", "cat": "常识"}, {"num": 17, "dir": "D", "row": 3, "col": 8, "word": "随葬品", "clue": "从墓里挖出来的那些器物", "cat": "历史"}, {"num": 18, "dir": "D", "row": 3, "col": 10, "word": "潜移默化", "clue": "形容影响在不知不觉中发生", "cat": "成语"}, {"num": 19, "dir": "D", "row": 3, "col": 12, "word": "夜莺", "clue": "济慈为它写过颂歌", "cat": "文学"}, {"num": 20, "dir": "D", "row": 4, "col": 1, "word": "土特产", "clue": "出门旅游常带回来的那些", "cat": "常识"}, {"num": 21, "dir": "D", "row": 5, "col": 0, "word": "土生土长", "clue": "形容在本地出生长大", "cat": "成语"}, {"num": 22, "dir": "D", "row": 5, "col": 2, "word": "产量", "clue": "亩产多少斤说的就是这个", "cat": "经济"}, {"num": 24, "dir": "D", "row": 5, "col": 7, "word": "作品", "clue": "作家与画家留下的东西", "cat": "文学"}, {"num": 26, "dir": "D", "row": 6, "col": 4, "word": "仪器", "clue": "实验室里那些精密装置", "cat": "科学"}, {"num": 27, "dir": "D", "row": 6, "col": 9, "word": "氧气", "clue": "潜水时最要紧的那样东西", "cat": "科学"}, {"num": 28, "dir": "D", "row": 6, "col": 12, "word": "原原本本", "clue": "从头到尾、一点不落地说清楚", "cat": "成语"}, {"num": 29, "dir": "D", "row": 6, "col": 14, "word": "目的论", "clue": "认为万物皆有其所向的那种解释方式", "cat": "哲学"}, {"num": 31, "dir": "D", "row": 7, "col": 6, "word": "阴极射线", "clue": "汤姆孙由它发现了电子", "cat": "物理"}, {"num": 33, "dir": "D", "row": 8, "col": 2, "word": "歌唱家", "clue": "以演唱为业的艺术家", "cat": "音乐"}, {"num": 35, "dir": "D", "row": 8, "col": 10, "word": "融会贯通", "clue": "把各方面知识打通", "cat": "成语"}, {"num": 37, "dir": "D", "row": 9, "col": 4, "word": "地铁", "clue": "东京、伦敦、上海都靠它通勤", "cat": "常识"}, {"num": 41, "dir": "D", "row": 10, "col": 5, "word": "路遥知马力", "clue": "下句是日久见人心", "cat": "熟语"}, {"num": 42, "dir": "D", "row": 11, "col": 0, "word": "五光十色", "clue": "形容色彩繁多而艳丽", "cat": "成语"}, {"num": 43, "dir": "D", "row": 11, "col": 3, "word": "触目惊心", "clue": "看一眼就让人心里发紧", "cat": "成语"}, {"num": 45, "dir": "D", "row": 11, "col": 8, "word": "普鲁斯特", "clue": "一块玛德琳蛋糕引出七卷书的法国人", "cat": "文学"}, {"num": 46, "dir": "D", "row": 11, "col": 13, "word": "胡言乱语", "clue": "形容说话毫无条理", "cat": "成语"}, {"num": 50, "dir": "D", "row": 13, "col": 10, "word": "手性", "clue": "像左右手一样无法重合的那种性质", "cat": "化学"}]};
+const N = DATA.n;
+const G = DATA.grid;
+const NUMS = DATA.nums;
+const ENTRIES = DATA.entries;
+
+const cellEl = {};   // "r,c" -> td
+const inputEl = {};  // "r,c" -> input
+const cellEntries = {}; // "r,c" -> {A:entry, D:entry}
+const revealed = new Set();
+
+ENTRIES.forEach((e, idx) => {
+  e.id = idx;
+  e.cells = [];
+  for (let i = 0; i < e.word.length; i++) {
+    const r = e.dir === 'A' ? e.row : e.row + i;
+    const c = e.dir === 'A' ? e.col + i : e.col;
+    const k = r + ',' + c;
+    e.cells.push(k);
+    (cellEntries[k] = cellEntries[k] || {})[e.dir] = e;
+  }
+});
+
+let curDir = 'A';
+let curKey = null;
+
+/* ---------- build grid ---------- */
+const tbl = document.createElement('table');
+tbl.className = 'grid';
+for (let r = 0; r < N; r++) {
+  const tr = document.createElement('tr');
+  for (let c = 0; c < N; c++) {
+    const td = document.createElement('td');
+    const k = r + ',' + c;
+    if (!G[r][c]) {
+      td.className = 'block';
+    } else {
+      if (NUMS[k]) {
+        const s = document.createElement('span');
+        s.className = 'num'; s.textContent = NUMS[k];
+        td.appendChild(s);
+      }
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.autocomplete = 'off'; inp.autocapitalize = 'off'; inp.spellcheck = false;
+      inp.dataset.k = k;
+      td.appendChild(inp);
+      cellEl[k] = td; inputEl[k] = inp;
+      bind(inp, k);
+      td.addEventListener('mousedown', ev => {
+        if (curKey === k) { toggleDir(); }
+        setTimeout(() => focusCell(k), 0);
+      });
+    }
+    tr.appendChild(td);
+  }
+  tbl.appendChild(tr);
+}
+document.getElementById('gridbox').appendChild(tbl);
+
+/* ---------- clue lists ---------- */
+function renderList(dir, el) {
+  el.innerHTML = '';
+  ENTRIES.filter(e => e.dir === dir).sort((a, b) => a.num - b.num).forEach(e => {
+    const li = document.createElement('li');
+    li.dataset.id = e.id;
+    li.innerHTML = '<span class="n">' + e.num + '</span><span class="txt">' +
+      escapeHtml(e.clue) + '<span class="len">（' + e.word.length + '字）</span>' +
+      '<span class="cat">' + e.cat + '</span></span>';
+    li.addEventListener('click', () => { curDir = e.dir; focusCell(e.cells[0]); });
+    el.appendChild(li);
+  });
+}
+function escapeHtml(s){return s.replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));}
+renderList('A', document.getElementById('listA'));
+renderList('D', document.getElementById('listD'));
+
+/* ---------- input handling (IME friendly) ---------- */
+function bind(inp, k) {
+  let composing = false;
+  inp.addEventListener('compositionstart', () => composing = true);
+  inp.addEventListener('compositionend', () => { composing = false; normalize(inp, k, true); });
+  inp.addEventListener('input', () => { if (!composing) normalize(inp, k, true); });
+  inp.addEventListener('focus', () => { curKey = k; refresh(); });
+  inp.addEventListener('keydown', ev => {
+    if (composing) return;
+    const [r, c] = k.split(',').map(Number);
+    if (ev.key === ' ') { ev.preventDefault(); toggleDir(); refresh(); return; }
+    if (ev.key === 'Tab') { ev.preventDefault(); jumpWord(ev.shiftKey ? -1 : 1); return; }
+    if (ev.key === 'Enter') { ev.preventDefault(); jumpWord(1); return; }
+    if (ev.key === 'Backspace') {
+      ev.preventDefault();
+      if (inp.value) { inp.value = ''; cellEl[k].classList.remove('wrong','done','revealed'); }
+      else { move(-1); }
+      updateStat(); return;
+    }
+    if (ev.key === 'Delete') { ev.preventDefault(); inp.value=''; cellEl[k].classList.remove('wrong','done','revealed'); updateStat(); return; }
+    const map = {ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]};
+    if (map[ev.key]) {
+      ev.preventDefault();
+      const want = (ev.key==='ArrowUp'||ev.key==='ArrowDown') ? 'D' : 'A';
+      if (curDir !== want && cellEntries[k] && cellEntries[k][want]) { curDir = want; refresh(); return; }
+      let [dr, dc] = map[ev.key], rr = r + dr, cc = c + dc;
+      while (rr>=0 && rr<N && cc>=0 && cc<N) {
+        if (G[rr][cc]) { focusCell(rr+','+cc); return; }
+        rr += dr; cc += dc;
+      }
+    }
+  });
+}
+function normalize(inp, k, advance) {
+  const m = inp.value.match(/[\u3400-\u9fff\uf900-\ufaff]/g);
+  inp.value = m ? m[m.length-1] : '';
+  cellEl[k].classList.remove('wrong');
+  if (inp.value) { cellEl[k].classList.remove('revealed'); if (advance) move(1); }
+  updateStat();
+}
+function toggleDir() {
+  if (!curKey) return;
+  const ce = cellEntries[curKey] || {};
+  const other = curDir === 'A' ? 'D' : 'A';
+  if (ce[other]) curDir = other;
+}
+function focusCell(k) {
+  if (!inputEl[k]) return;
+  const ce = cellEntries[k] || {};
+  if (!ce[curDir]) curDir = ce['A'] ? 'A' : 'D';
+  curKey = k;
+  inputEl[k].focus();
+  try { inputEl[k].setSelectionRange(inputEl[k].value.length, inputEl[k].value.length); } catch(e){}
+  refresh();
+}
+function curEntry() {
+  if (!curKey) return null;
+  const ce = cellEntries[curKey] || {};
+  return ce[curDir] || ce['A'] || ce['D'] || null;
+}
+function move(step) {
+  const e = curEntry(); if (!e) return;
+  const i = e.cells.indexOf(curKey);
+  const j = i + step;
+  if (j >= 0 && j < e.cells.length) focusCell(e.cells[j]);
+  else refresh();
+}
+function jumpWord(step) {
+  const e = curEntry(); if (!e) return;
+  const same = ENTRIES.filter(x => x.dir === e.dir).sort((a,b)=>a.num-b.num);
+  let i = same.findIndex(x => x.id === e.id) + step;
+  if (i < 0) i = same.length - 1;
+  if (i >= same.length) i = 0;
+  curDir = e.dir;
+  focusCell(same[i].cells[0]);
+}
+
+/* ---------- rendering ---------- */
+function refresh() {
+  Object.values(cellEl).forEach(td => td.classList.remove('inword','cur'));
+  const e = curEntry();
+  if (e) {
+    e.cells.forEach(k => cellEl[k].classList.add('inword'));
+    document.getElementById('curclue').innerHTML =
+      '<b>' + e.num + (e.dir === 'A' ? ' 横向' : ' 纵向') + '</b> · ' + escapeHtml(e.clue) +
+      ' <span class="len">（' + e.word.length + '字）</span><span class="cat">' + e.cat + '</span>';
+  }
+  if (curKey) cellEl[curKey].classList.add('cur');
+  document.querySelectorAll('ol.clues li').forEach(li => {
+    li.classList.toggle('on', e && +li.dataset.id === e.id);
+  });
+  markSolved();
+}
+function markSolved() {
+  document.querySelectorAll('ol.clues li').forEach(li => {
+    const e = ENTRIES[+li.dataset.id];
+    const got = e.cells.map(k => inputEl[k].value).join('');
+    li.classList.toggle('solved', got === e.word);
+  });
+}
+function updateStat() {
+  let filled = 0, total = 0;
+  Object.keys(inputEl).forEach(k => { total++; if (inputEl[k].value) filled++; });
+  let solved = ENTRIES.filter(e => e.cells.map(k => inputEl[k].value).join('') === e.word).length;
+  document.getElementById('stat').textContent =
+    '已填 ' + filled + '/' + total + ' 字 · 完成 ' + solved + '/' + ENTRIES.length + ' 词';
+  markSolved();
+}
+
+/* ---------- buttons ---------- */
+document.getElementById('btnCheck').onclick = () => {
+  let wrong = 0;
+  Object.keys(inputEl).forEach(k => {
+    const [r,c] = k.split(',').map(Number);
+    const td = cellEl[k], v = inputEl[k].value;
+    td.classList.remove('wrong','done');
+    if (!v) return;
+    if (v === G[r][c]) { if (!revealed.has(k)) td.classList.add('done'); }
+    else { td.classList.add('wrong'); wrong++; }
+  });
+  const s = document.getElementById('stat');
+  const old = s.textContent;
+  s.textContent = wrong ? ('发现 ' + wrong + ' 个错字') : '目前填的字全对';
+  setTimeout(updateStat, 2200);
+};
+document.getElementById('btnHintCell').onclick = () => {
+  if (!curKey) return;
+  const [r,c] = curKey.split(',').map(Number);
+  inputEl[curKey].value = G[r][c];
+  revealed.add(curKey);
+  cellEl[curKey].classList.remove('wrong','done');
+  cellEl[curKey].classList.add('revealed');
+  updateStat(); move(1);
+};
+document.getElementById('btnHintWord').onclick = () => {
+  const e = curEntry(); if (!e) return;
+  e.cells.forEach(k => {
+    const [r,c] = k.split(',').map(Number);
+    inputEl[k].value = G[r][c];
+    revealed.add(k);
+    cellEl[k].classList.remove('wrong','done');
+    cellEl[k].classList.add('revealed');
+  });
+  updateStat(); refresh();
+};
+document.getElementById('btnAll').onclick = () => {
+  Object.keys(inputEl).forEach(k => {
+    const [r,c] = k.split(',').map(Number);
+    if (inputEl[k].value !== G[r][c]) { inputEl[k].value = G[r][c]; revealed.add(k);
+      cellEl[k].classList.add('revealed'); }
+    cellEl[k].classList.remove('wrong');
+  });
+  updateStat();
+};
+document.getElementById('btnClear').onclick = () => {
+  Object.keys(inputEl).forEach(k => {
+    inputEl[k].value = '';
+    cellEl[k].classList.remove('wrong','done','revealed');
+  });
+  revealed.clear(); updateStat();
+};
+
+updateStat();
+</script>
+</body>
+</html>
