@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>进阶版 第二章 · 中文填字游戏</title>
+<style>
+  :root{
+    --paper:#131519; --ink:#f0ece3; --line:#4b525d; --block:#090a0c;
+    --accent:#d2913f; --accent-soft:#3d3220; --word:#3a4250; --cur:#6b4f22;
+    --ok:#74c08a; --bad:#e2705f; --muted:#8b9099;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:"Songti SC","STSong","Source Han Serif SC","Noto Serif CJK SC","Noto Serif SC",serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  header{padding:22px 24px 10px;border-bottom:1px solid var(--line)}
+  h1{margin:0;font-size:24px;letter-spacing:.14em}
+  .sub{margin-top:6px;font-size:13px;color:var(--muted);letter-spacing:.05em}
+  .sub a.back{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent}
+  .sub a.back:hover{border-color:var(--accent)}
+  .wrap{display:flex;gap:26px;align-items:flex-start;padding:18px 24px 60px;flex-wrap:wrap}
+  .left{flex:0 0 auto;position:sticky;top:12px;align-self:flex-start}
+  .right{flex:1 1 380px;min-width:320px;max-width:640px}
+
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
+  button{
+    font-family:inherit;font-size:13px;padding:7px 13px;border:1px solid var(--line);
+    background:#1c1f25;color:var(--ink);border-radius:3px;cursor:pointer;letter-spacing:.06em;
+  }
+  button:hover{background:var(--accent-soft);border-color:var(--accent)}
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  button.primary:hover{background:#b0762f}
+  .stat{font-size:13px;color:var(--muted);margin-left:auto;letter-spacing:.06em;white-space:nowrap}
+
+  table.grid{border-collapse:collapse;background:#2b313a;box-shadow:0 1px 0 var(--line)}
+  table.grid td{
+    width:42px;height:42px;padding:0;border:1px solid var(--line);position:relative;
+    text-align:center;vertical-align:middle;
+  }
+  table.grid td.block{background:var(--block);border-color:var(--block)}
+  td .num{position:absolute;top:0px;left:2px;font-size:10px;line-height:12px;color:var(--muted);
+          font-family:ui-sans-serif,system-ui,sans-serif;pointer-events:none;z-index:2}
+  td input{
+    width:100%;height:100%;border:0;background:transparent;text-align:center;
+    font-family:inherit;font-size:24px;color:var(--ink);padding:0;outline:none;
+    caret-color:var(--accent);
+  }
+  td.inword{background:var(--word)}
+  td.cur{background:var(--cur)}
+  td.wrong input{color:var(--bad);text-decoration:line-through}
+  td.revealed input{color:var(--accent)}
+  td.done input{color:var(--ok)}
+
+  .clue-head{display:flex;gap:14px;border-bottom:1px solid var(--line);margin-bottom:8px}
+  .tab{padding:6px 2px;font-size:15px;cursor:pointer;color:var(--muted);letter-spacing:.1em;
+       border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--accent);border-color:var(--accent)}
+  .cols{display:flex;gap:22px;flex-wrap:wrap}
+  .col{flex:1 1 280px;min-width:260px}
+  .col h3{font-size:13px;letter-spacing:.2em;color:var(--muted);margin:6px 0 8px;font-weight:normal}
+  ol.clues{list-style:none;margin:0;padding:0}
+  ol.clues li{
+    display:flex;gap:8px;padding:5px 7px;border-radius:3px;cursor:pointer;font-size:13.5px;line-height:1.55;
+  }
+  ol.clues li:hover{background:#1c1f25}
+  ol.clues li.on{background:var(--accent-soft)}
+  ol.clues li.solved .txt{color:var(--muted);text-decoration:line-through}
+  li .n{flex:0 0 26px;text-align:right;color:var(--accent);font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;padding-top:2px}
+  li .txt{flex:1}
+  li .len{color:var(--muted);font-size:11px}
+  .cat{display:inline-block;font-size:10px;color:var(--muted);border:1px solid var(--line);
+       border-radius:2px;padding:0 4px;margin-left:5px;vertical-align:1px;letter-spacing:.08em}
+  .current-clue{
+    background:#1c1f25;border:1px solid var(--line);border-left:3px solid var(--accent);
+    padding:9px 12px;margin-bottom:12px;font-size:14px;line-height:1.6;min-height:22px
+  }
+  .hint{font-size:12px;color:var(--muted);line-height:1.8;margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+  @media(max-width:760px){
+    .left{position:static}
+    table.grid td{width:30px;height:30px}
+    td input{font-size:17px}
+    .wrap{padding:14px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>进 阶 版 · 第 二 章</h1>
+  <div class="sub">共 56 条谜面 &nbsp;·&nbsp; <a class="back" href="index.html">← 返回目录</a></div>
+</header>
+
+<div class="wrap">
+  <div class="left">
+    <div class="toolbar">
+      <button id="btnCheck">检查</button>
+      <button id="btnHintCell">提示一字</button>
+      <button id="btnHintWord">揭示本词</button>
+      <button id="btnAll" class="primary">显示全部答案</button>
+      <button id="btnClear">清空</button>
+      <span class="stat" id="stat"></span>
+    </div>
+    <div id="gridbox"></div>
+    <div class="hint">
+      方向键移动 · 空格键切换横／纵 · 退格删除并后退 · Tab 跳到下一个词<br>
+      直接用中文输入法打字即可，选好字后会自动跳到下一格。
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="current-clue" id="curclue">点击格子或右侧谜面开始。</div>
+    <div class="cols">
+      <div class="col">
+        <h3>横 向</h3>
+        <ol class="clues" id="listA"></ol>
+      </div>
+      <div class="col">
+        <h3>纵 向</h3>
+        <ol class="clues" id="listD"></ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DATA = {"n": 15, "grid": [["", "黄", "道", "十", "二", "宫", "", "", "", "", "", "孤", "注", "一", "掷"], ["黄", "河", "", "堰", "", "", "管", "乐", "", "", "荒", "岛", "", "举", ""], ["", "入", "", "", "", "克", "", "手", "办", "", "诞", "", "", "成", ""], ["", "海", "内", "存", "知", "己", "", "", "公", "安", "派", "", "无", "名", "指"], ["洋", "流", "", "在", "", "复", "调", "", "", "慰", "", "", "", "", "指"], ["", "", "", "主", "", "礼", "", "活", "性", "剂", "", "", "定", "居", "点"], ["神", "秘", "主", "义", "", "", "一", "", "", "", "十", "二", "音", "", "点"], ["经", "", "演", "", "看", "不", "见", "的", "手", "", "二", "", "鼓", "掌", ""], ["网", "友", "", "", "", "", "钟", "", "冲", "积", "平", "原", "", "门", ""], ["络", "", "灯", "", "心", "甘", "情", "愿", "", "", "均", "", "主", "人", "公"], ["", "", "火", "山", "灰", "", "", "", "主", "旋", "律", "", "任", "", "地"], ["", "", "阑", "", "意", "难", "平", "", "", "律", "", "", "医", "", "悲"], ["出", "", "珊", "", "冷", "", "均", "", "景", "", "调", "酒", "师", "", "剧"], ["售", "票", "处", "", "", "", "主", "产", "区", "", "", "神", "", "", ""], ["", "房", "", "理", "性", "主", "义", "", "", "", "", "", "", "", ""]], "nums": {"0,1": 1, "0,3": 2, "0,11": 3, "0,13": 4, "1,0": 5, "1,6": 6, "1,7": 7, "1,10": 8, "2,5": 9, "2,7": 10, "2,8": 11, "3,1": 12, "3,3": 13, "3,8": 14, "3,9": 15, "3,12": 16, "3,14": 17, "4,0": 18, "4,5": 19, "5,7": 20, "5,12": 21, "6,0": 22, "6,2": 23, "6,6": 24, "6,10": 25, "7,4": 26, "7,8": 27, "7,12": 28, "7,13": 29, "8,0": 30, "8,8": 31, "9,2": 32, "9,4": 33, "9,12": 34, "9,14": 35, "10,2": 36, "10,8": 37, "10,9": 38, "11,4": 39, "11,6": 40, "12,0": 41, "12,8": 42, "12,10": 43, "12,11": 44, "13,0": 45, "13,1": 46, "13,6": 47, "14,3": 48}, "entries": [{"num": 1, "dir": "A", "row": 0, "col": 1, "word": "黄道十二宫", "clue": "白羊、金牛到双鱼这一整套星座的合称", "cat": "文化"}, {"num": 3, "dir": "A", "row": 0, "col": 11, "word": "孤注一掷", "clue": "赌徒把剩下的全押上，比喻最后拼一把", "cat": "成语"}, {"num": 5, "dir": "A", "row": 1, "col": 0, "word": "黄河", "clue": "中国第二长河，以泥沙含量极高著称，被称为母亲河", "cat": "地理"}, {"num": 6, "dir": "A", "row": 1, "col": 6, "word": "管乐", "clue": "长笛、单簧管、小号同属的那一组", "cat": "音乐"}, {"num": 8, "dir": "A", "row": 1, "col": 10, "word": "荒岛", "clue": "只准带三样东西去的那种假设", "cat": "常识"}, {"num": 10, "dir": "A", "row": 2, "col": 7, "word": "手办", "clue": "按动漫角色做的那种精细人形摆件", "cat": "流行"}, {"num": 12, "dir": "A", "row": 3, "col": 1, "word": "海内存知己", "clue": "王勃送杜少府时写下的名句上半，下句是天涯若比邻", "cat": "诗句"}, {"num": 14, "dir": "A", "row": 3, "col": 8, "word": "公安派", "clue": "袁宏道兄弟倡独抒性灵的明代文学流派", "cat": "文史"}, {"num": 16, "dir": "A", "row": 3, "col": 12, "word": "无名指", "clue": "五根手指里排第四、西方用来戴婚戒的那根", "cat": "常识"}, {"num": 18, "dir": "A", "row": 4, "col": 0, "word": "洋流", "clue": "黑潮与墨西哥湾流都属于这种大规模海水流动", "cat": "地质"}, {"num": 19, "dir": "A", "row": 4, "col": 5, "word": "复调", "clue": "巴赫的音乐织体；巴赫金拿它评陀思妥耶夫斯基", "cat": "文学"}, {"num": 20, "dir": "A", "row": 5, "col": 7, "word": "活性剂", "clue": "洗涤剂里降低水表面张力的那种成分，全称「表面__」", "cat": "科学"}, {"num": 21, "dir": "A", "row": 5, "col": 12, "word": "定居点", "clue": "游牧或迁徙的人群固定住下来形成的那个聚落", "cat": "地理"}, {"num": 22, "dir": "A", "row": 6, "col": 0, "word": "神秘主义", "clue": "主张靠直觉或冥想直接体认终极实在的那类思想", "cat": "哲学"}, {"num": 25, "dir": "A", "row": 6, "col": 10, "word": "十二音", "clue": "勋伯格发明的作曲法，把一个八度里的音平等排成序列", "cat": "音乐"}, {"num": 26, "dir": "A", "row": 7, "col": 4, "word": "看不见的手", "clue": "斯密用来描述市场自发协调的比喻", "cat": "经济"}, {"num": 28, "dir": "A", "row": 7, "col": 12, "word": "鼓掌", "clue": "表示赞赏时两手相击发出声响", "cat": "常识"}, {"num": 30, "dir": "A", "row": 8, "col": 0, "word": "网友", "clue": "只在网上打过交道、从没见过面的那种朋友", "cat": "流行"}, {"num": 31, "dir": "A", "row": 8, "col": 8, "word": "冲积平原", "clue": "河流带来的泥沙长期堆积形成的那种平原", "cat": "地理"}, {"num": 33, "dir": "A", "row": 9, "col": 4, "word": "心甘情愿", "clue": "完全出于自愿，一点也不勉强", "cat": "成语"}, {"num": 34, "dir": "A", "row": 9, "col": 12, "word": "主人公", "clue": "一部作品里故事围绕着他展开的那个人", "cat": "文学"}, {"num": 36, "dir": "A", "row": 10, "col": 2, "word": "火山灰", "clue": "火山喷发后飘落的那些细小碎屑，多了能遮蔽阳光", "cat": "科学"}, {"num": 37, "dir": "A", "row": 10, "col": 8, "word": "主旋律", "clue": "一首曲子里最突出、最容易被记住的那条线", "cat": "音乐"}, {"num": 39, "dir": "A", "row": 11, "col": 4, "word": "意难平", "clue": "结局不如人意、粉丝始终放不下的那种心情", "cat": "流行"}, {"num": 43, "dir": "A", "row": 12, "col": 10, "word": "调酒师", "clue": "站在吧台后面摇雪克壶的那位", "cat": "饮食"}, {"num": 45, "dir": "A", "row": 13, "col": 0, "word": "售票处", "clue": "剧场或车站里买票的那个窗口", "cat": "常识"}, {"num": 47, "dir": "A", "row": 13, "col": 6, "word": "主产区", "clue": "某种作物或产品产量最集中的那片地区", "cat": "经济"}, {"num": 48, "dir": "A", "row": 14, "col": 3, "word": "理性主义", "clue": "笛卡尔与莱布尼茨一派的立场", "cat": "哲学"}, {"num": 1, "dir": "D", "row": 0, "col": 1, "word": "黄河入海流", "clue": "王之涣《登鹳雀楼》第二句", "cat": "诗句"}, {"num": 2, "dir": "D", "row": 0, "col": 3, "word": "十堰", "clue": "湖北西北那座因第二汽车制造厂而建起来的城市", "cat": "地理"}, {"num": 3, "dir": "D", "row": 0, "col": 11, "word": "孤岛", "clue": "鲁滨逊待了二十八年的地方", "cat": "常识"}, {"num": 4, "dir": "D", "row": 0, "col": 13, "word": "一举成名", "clue": "一次成功就让所有人都知道了", "cat": "成语"}, {"num": 7, "dir": "D", "row": 1, "col": 7, "word": "乐手", "clue": "在乐队里负责演奏乐器的那些人", "cat": "音乐"}, {"num": 8, "dir": "D", "row": 1, "col": 10, "word": "荒诞派", "clue": "《等待戈多》所属的戏剧流派", "cat": "文学"}, {"num": 9, "dir": "D", "row": 2, "col": 5, "word": "克己复礼", "clue": "孔子回答颜渊问仁时说的那四个字", "cat": "哲学"}, {"num": 11, "dir": "D", "row": 2, "col": 8, "word": "办公", "clue": "在单位处理公务，常说「__室」", "cat": "常识"}, {"num": 13, "dir": "D", "row": 3, "col": 3, "word": "存在主义", "clue": "萨特那句「存在先于本质」所代表的哲学流派", "cat": "哲学"}, {"num": 15, "dir": "D", "row": 3, "col": 9, "word": "安慰剂", "clue": "不含有效成分、用来做对照的那种药", "cat": "科学"}, {"num": 17, "dir": "D", "row": 3, "col": 14, "word": "指指点点", "clue": "在背后对别人评头论足、说三道四", "cat": "成语"}, {"num": 21, "dir": "D", "row": 5, "col": 12, "word": "定音鼓", "clue": "能调出确定音高、常在高潮处轰鸣的那种鼓", "cat": "音乐"}, {"num": 22, "dir": "D", "row": 6, "col": 0, "word": "神经网络", "clue": "模仿神经元连接方式的那类机器学习模型", "cat": "科技"}, {"num": 23, "dir": "D", "row": 6, "col": 2, "word": "主演", "clue": "在一部戏里挑大梁的那位演员", "cat": "文化"}, {"num": 24, "dir": "D", "row": 6, "col": 6, "word": "一见钟情", "clue": "第一次见面就爱上了对方", "cat": "成语"}, {"num": 25, "dir": "D", "row": 6, "col": 10, "word": "十二平均律", "clue": "把八度等分成十二份的定律法", "cat": "艺术"}, {"num": 27, "dir": "D", "row": 7, "col": 8, "word": "手冲", "clue": "用细口壶把水绕圈注入滤杯的那种咖啡做法", "cat": "饮食"}, {"num": 29, "dir": "D", "row": 7, "col": 13, "word": "掌门人", "clue": "武侠小说里一派之首；也泛指带头的那位", "cat": "武侠"}, {"num": 32, "dir": "D", "row": 9, "col": 2, "word": "灯火阑珊处", "clue": "众里寻他千百度之后的那个地方", "cat": "诗句"}, {"num": 33, "dir": "D", "row": 9, "col": 4, "word": "心灰意冷", "clue": "形容彻底失望、提不起劲", "cat": "成语"}, {"num": 34, "dir": "D", "row": 9, "col": 12, "word": "主任医师", "clue": "医院里职称最高的那一级医生", "cat": "常识"}, {"num": 35, "dir": "D", "row": 9, "col": 14, "word": "公地悲剧", "clue": "人人可放牧的草场终被啃光", "cat": "经济"}, {"num": 38, "dir": "D", "row": 10, "col": 9, "word": "旋律", "clue": "一串有高低起伏、能哼出来的音", "cat": "音乐"}, {"num": 40, "dir": "D", "row": 11, "col": 6, "word": "平均主义", "clue": "主张不分差别、一律平分的那种分配观念", "cat": "经济"}, {"num": 41, "dir": "D", "row": 12, "col": 0, "word": "出售", "clue": "把东西卖出去，商店橱窗上常贴「__中」", "cat": "常识"}, {"num": 42, "dir": "D", "row": 12, "col": 8, "word": "景区", "clue": "划出来供人游览、通常要买门票的那片地方", "cat": "常识"}, {"num": 44, "dir": "D", "row": 12, "col": 11, "word": "酒神", "clue": "狄俄尼索斯的头衔，尼采拿它对举日神", "cat": "哲学"}, {"num": 46, "dir": "D", "row": 13, "col": 1, "word": "票房", "clue": "衡量一部电影卖座程度的那个数字", "cat": "文化"}]};
+const N = DATA.n;
+const G = DATA.grid;
+const NUMS = DATA.nums;
+const ENTRIES = DATA.entries;
+
+const cellEl = {};   // "r,c" -> td
+const inputEl = {};  // "r,c" -> input
+const cellEntries = {}; // "r,c" -> {A:entry, D:entry}
+const revealed = new Set();
+
+ENTRIES.forEach((e, idx) => {
+  e.id = idx;
+  e.cells = [];
+  for (let i = 0; i < e.word.length; i++) {
+    const r = e.dir === 'A' ? e.row : e.row + i;
+    const c = e.dir === 'A' ? e.col + i : e.col;
+    const k = r + ',' + c;
+    e.cells.push(k);
+    (cellEntries[k] = cellEntries[k] || {})[e.dir] = e;
+  }
+});
+
+let curDir = 'A';
+let curKey = null;
+
+/* ---------- build grid ---------- */
+const tbl = document.createElement('table');
+tbl.className = 'grid';
+for (let r = 0; r < N; r++) {
+  const tr = document.createElement('tr');
+  for (let c = 0; c < N; c++) {
+    const td = document.createElement('td');
+    const k = r + ',' + c;
+    if (!G[r][c]) {
+      td.className = 'block';
+    } else {
+      if (NUMS[k]) {
+        const s = document.createElement('span');
+        s.className = 'num'; s.textContent = NUMS[k];
+        td.appendChild(s);
+      }
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.autocomplete = 'off'; inp.autocapitalize = 'off'; inp.spellcheck = false;
+      inp.dataset.k = k;
+      td.appendChild(inp);
+      cellEl[k] = td; inputEl[k] = inp;
+      bind(inp, k);
+      td.addEventListener('mousedown', ev => {
+        if (curKey === k) { toggleDir(); }
+        setTimeout(() => focusCell(k), 0);
+      });
+    }
+    tr.appendChild(td);
+  }
+  tbl.appendChild(tr);
+}
+document.getElementById('gridbox').appendChild(tbl);
+
+/* ---------- clue lists ---------- */
+function renderList(dir, el) {
+  el.innerHTML = '';
+  ENTRIES.filter(e => e.dir === dir).sort((a, b) => a.num - b.num).forEach(e => {
+    const li = document.createElement('li');
+    li.dataset.id = e.id;
+    li.innerHTML = '<span class="n">' + e.num + '</span><span class="txt">' +
+      escapeHtml(e.clue) + '<span class="len">（' + e.word.length + '字）</span>' +
+      '<span class="cat">' + e.cat + '</span></span>';
+    li.addEventListener('click', () => { curDir = e.dir; focusCell(e.cells[0]); });
+    el.appendChild(li);
+  });
+}
+function escapeHtml(s){return s.replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));}
+renderList('A', document.getElementById('listA'));
+renderList('D', document.getElementById('listD'));
+
+/* ---------- input handling (IME friendly) ---------- */
+function bind(inp, k) {
+  let composing = false;
+  inp.addEventListener('compositionstart', () => composing = true);
+  inp.addEventListener('compositionend', () => { composing = false; normalize(inp, k, true); });
+  inp.addEventListener('input', () => { if (!composing) normalize(inp, k, true); });
+  inp.addEventListener('focus', () => { curKey = k; refresh(); });
+  inp.addEventListener('keydown', ev => {
+    if (composing) return;
+    const [r, c] = k.split(',').map(Number);
+    if (ev.key === ' ') { ev.preventDefault(); toggleDir(); refresh(); return; }
+    if (ev.key === 'Tab') { ev.preventDefault(); jumpWord(ev.shiftKey ? -1 : 1); return; }
+    if (ev.key === 'Enter') { ev.preventDefault(); jumpWord(1); return; }
+    if (ev.key === 'Backspace') {
+      ev.preventDefault();
+      if (inp.value) { inp.value = ''; cellEl[k].classList.remove('wrong','done','revealed'); }
+      else { move(-1); }
+      updateStat(); return;
+    }
+    if (ev.key === 'Delete') { ev.preventDefault(); inp.value=''; cellEl[k].classList.remove('wrong','done','revealed'); updateStat(); return; }
+    const map = {ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]};
+    if (map[ev.key]) {
+      ev.preventDefault();
+      const want = (ev.key==='ArrowUp'||ev.key==='ArrowDown') ? 'D' : 'A';
+      if (curDir !== want && cellEntries[k] && cellEntries[k][want]) { curDir = want; refresh(); return; }
+      let [dr, dc] = map[ev.key], rr = r + dr, cc = c + dc;
+      while (rr>=0 && rr<N && cc>=0 && cc<N) {
+        if (G[rr][cc]) { focusCell(rr+','+cc); return; }
+        rr += dr; cc += dc;
+      }
+    }
+  });
+}
+function normalize(inp, k, advance) {
+  const m = inp.value.match(/[\u3400-\u9fff\uf900-\ufaff]/g);
+  cellEl[k].classList.remove('wrong');
+  if (!m) { inp.value = ''; updateStat(); return; }
+  const e = curEntry();
+  const i = e ? e.cells.indexOf(k) : -1;
+  if (i < 0) {                       // 兜底：只保留最后一个字
+    inp.value = m[m.length-1];
+    cellEl[k].classList.remove('revealed');
+    updateStat(); return;
+  }
+  // 多字连打：依次铺进本词后续格子
+  let lastIdx = i;
+  for (let j = 0; j < m.length && i + j < e.cells.length; j++) {
+    const kk = e.cells[i + j];
+    inputEl[kk].value = m[j];
+    cellEl[kk].classList.remove('wrong', 'revealed');
+    lastIdx = i + j;
+  }
+  updateStat();
+  if (advance) {
+    if (lastIdx + 1 < e.cells.length) focusCell(e.cells[lastIdx + 1]);
+    else { curKey = e.cells[lastIdx]; refresh(); }
+  }
+}
+function toggleDir() {
+  if (!curKey) return;
+  const ce = cellEntries[curKey] || {};
+  const other = curDir === 'A' ? 'D' : 'A';
+  if (ce[other]) curDir = other;
+}
+function focusCell(k) {
+  if (!inputEl[k]) return;
+  const ce = cellEntries[k] || {};
+  if (!ce[curDir]) curDir = ce['A'] ? 'A' : 'D';
+  curKey = k;
+  inputEl[k].focus();
+  try { inputEl[k].setSelectionRange(inputEl[k].value.length, inputEl[k].value.length); } catch(e){}
+  refresh();
+}
+function curEntry() {
+  if (!curKey) return null;
+  const ce = cellEntries[curKey] || {};
+  return ce[curDir] || ce['A'] || ce['D'] || null;
+}
+function move(step) {
+  const e = curEntry(); if (!e) return;
+  const i = e.cells.indexOf(curKey);
+  const j = i + step;
+  if (j >= 0 && j < e.cells.length) focusCell(e.cells[j]);
+  else refresh();
+}
+function jumpWord(step) {
+  const e = curEntry(); if (!e) return;
+  const same = ENTRIES.filter(x => x.dir === e.dir).sort((a,b)=>a.num-b.num);
+  let i = same.findIndex(x => x.id === e.id) + step;
+  if (i < 0) i = same.length - 1;
+  if (i >= same.length) i = 0;
+  curDir = e.dir;
+  focusCell(same[i].cells[0]);
+}
+
+/* ---------- rendering ---------- */
+function refresh() {
+  Object.values(cellEl).forEach(td => td.classList.remove('inword','cur'));
+  const e = curEntry();
+  if (e) {
+    e.cells.forEach(k => cellEl[k].classList.add('inword'));
+    document.getElementById('curclue').innerHTML =
+      '<b>' + e.num + (e.dir === 'A' ? ' 横向' : ' 纵向') + '</b> · ' + escapeHtml(e.clue) +
+      ' <span class="len">（' + e.word.length + '字）</span><span class="cat">' + e.cat + '</span>';
+  }
+  if (curKey) cellEl[curKey].classList.add('cur');
+  document.querySelectorAll('ol.clues li').forEach(li => {
+    li.classList.toggle('on', e && +li.dataset.id === e.id);
+  });
+  markSolved();
+}
+function markSolved() {
+  document.querySelectorAll('ol.clues li').forEach(li => {
+    const e = ENTRIES[+li.dataset.id];
+    const got = e.cells.map(k => inputEl[k].value).join('');
+    li.classList.toggle('solved', got === e.word);
+  });
+}
+function updateStat() {
+  let filled = 0, total = 0;
+  Object.keys(inputEl).forEach(k => { total++; if (inputEl[k].value) filled++; });
+  let solved = ENTRIES.filter(e => e.cells.map(k => inputEl[k].value).join('') === e.word).length;
+  document.getElementById('stat').textContent =
+    '已填 ' + filled + '/' + total + ' 字 · 完成 ' + solved + '/' + ENTRIES.length + ' 词';
+  markSolved();
+}
+
+/* ---------- buttons ---------- */
+document.getElementById('btnCheck').onclick = () => {
+  let wrong = 0;
+  Object.keys(inputEl).forEach(k => {
+    const [r,c] = k.split(',').map(Number);
+    const td = cellEl[k], v = inputEl[k].value;
+    td.classList.remove('wrong','done');
+    if (!v) return;
+    if (v === G[r][c]) { if (!revealed.has(k)) td.classList.add('done'); }
+    else { td.classList.add('wrong'); wrong++; }
+  });
+  const s = document.getElementById('stat');
+  const old = s.textContent;
+  s.textContent = wrong ? ('发现 ' + wrong + ' 个错字') : '目前填的字全对';
+  setTimeout(updateStat, 2200);
+};
+document.getElementById('btnHintCell').onclick = () => {
+  if (!curKey) return;
+  const [r,c] = curKey.split(',').map(Number);
+  inputEl[curKey].value = G[r][c];
+  revealed.add(curKey);
+  cellEl[curKey].classList.remove('wrong','done');
+  cellEl[curKey].classList.add('revealed');
+  updateStat(); move(1);
+};
+document.getElementById('btnHintWord').onclick = () => {
+  const e = curEntry(); if (!e) return;
+  e.cells.forEach(k => {
+    const [r,c] = k.split(',').map(Number);
+    inputEl[k].value = G[r][c];
+    revealed.add(k);
+    cellEl[k].classList.remove('wrong','done');
+    cellEl[k].classList.add('revealed');
+  });
+  updateStat(); refresh();
+};
+document.getElementById('btnAll').onclick = () => {
+  Object.keys(inputEl).forEach(k => {
+    const [r,c] = k.split(',').map(Number);
+    if (inputEl[k].value !== G[r][c]) { inputEl[k].value = G[r][c]; revealed.add(k);
+      cellEl[k].classList.add('revealed'); }
+    cellEl[k].classList.remove('wrong');
+  });
+  updateStat();
+};
+document.getElementById('btnClear').onclick = () => {
+  Object.keys(inputEl).forEach(k => {
+    inputEl[k].value = '';
+    cellEl[k].classList.remove('wrong','done','revealed');
+  });
+  revealed.clear(); updateStat();
+};
+
+updateStat();
+</script>
+</body>
+</html>
