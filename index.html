@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>中文填字游戏</title>
+<style>
+  :root{--paper:#f6f1e7;--ink:#22201c;--line:#c9bfab;--accent:#b3541e;--muted:#7a7263}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:var(--paper);color:var(--ink);
+    font-family:"Songti SC","STSong","Source Han Serif SC","Noto Serif CJK SC",serif;
+    display:flex;justify-content:center;padding:56px 20px 80px}
+  .wrap{max-width:820px;width:100%}
+  h1{font-size:32px;letter-spacing:.2em;margin:0 0 44px;font-weight:normal}
+
+  section{margin-bottom:44px}
+  .head{display:flex;align-items:baseline;gap:14px;
+    border-bottom:1px solid var(--line);padding-bottom:9px;margin-bottom:4px}
+  .name{font-size:20px;letter-spacing:.16em}
+  .desc{font-size:13px;color:var(--muted);line-height:1.7}
+  section.adv .name{color:#8a6a2f}
+
+  ul{list-style:none;margin:0;padding:0}
+  li a,li span.soon{
+    display:flex;align-items:baseline;gap:14px;padding:13px 4px;
+    border-bottom:1px solid rgba(201,191,171,.5);
+    text-decoration:none;color:inherit;transition:.12s}
+  li a:hover{background:#fffdf8;padding-left:10px}
+  li:last-child a,li:last-child span.soon{border-bottom:0}
+  .ch{font-size:16px;letter-spacing:.1em;flex:0 0 auto}
+  .meta{font-size:12px;color:var(--muted);flex:1}
+  .go{font-size:13px;color:var(--accent)}
+  section.adv .go{color:#8a6a2f}
+  span.soon{color:#b5ad9c;cursor:default}
+  span.soon .ch{color:#b5ad9c}
+
+  footer{margin-top:50px;padding-top:18px;border-top:1px solid var(--line);
+    font-size:12px;color:var(--muted);line-height:2}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>中 文 填 字 游 戏</h1>
+
+  <section>
+    <div class="head">
+      <div class="name">标 准 版</div>
+    </div>
+    <div class="desc" style="margin:10px 0 6px">雅俗共赏。成语典故、诗句熟语、名人名作与科学常识混搭，大部分人能做出七八成。</div>
+    <ul>
+      <li><a href="standard-1.html">
+        <span class="ch">第 一 章</span>
+        <span class="meta">55 条谜面</span>
+        <span class="go">开始 →</span></a></li>
+      <li><span class="soon">
+        <span class="ch">第 二 章</span>
+        <span class="meta">敬请期待</span></span></li>
+    </ul>
+  </section>
+
+  <section class="adv">
+    <div class="head">
+      <div class="name">进 阶 版</div>
+    </div>
+    <div class="desc" style="margin:10px 0 6px">谜面只给线索，不给定义，需要一点冷知识储备和联想力。</div>
+    <ul>
+      <li><a href="advanced-1.html">
+        <span class="ch">第 一 章</span>
+        <span class="meta">58 条谜面</span>
+        <span class="go">开始 →</span></a></li>
+      <li><span class="soon">
+        <span class="ch">第 二 章</span>
+        <span class="meta">敬请期待</span></span></li>
+    </ul>
+  </section>
+
+  <footer>
+    每格填一个汉字，可以一次打完整个词，会自动铺进后面的格子<br>
+    方向键移动 · 空格键切换横／纵 · Tab 跳到下一个词 · 手机横屏体验更好
+  </footer>
+</div>
+</body>
+</html>
